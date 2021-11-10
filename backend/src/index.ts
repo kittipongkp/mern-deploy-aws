@@ -1,87 +1,90 @@
-import { config } from 'dotenv'
+import { config } from "dotenv"
 config()
-import express from 'express'
-import mongoose from 'mongoose'
-import passport from 'passport'
-import cookieParser from 'cookie-parser'
+import express from "express"
+import mongoose from "mongoose"
+import passport from "passport"
+import cookieParser from "cookie-parser"
 
-import createServer from './createServer'
-import { PassportFB, PassportGoogle } from './passport'
-import { FBAuthenticate, GoogleAuthenticate } from './passport/socialMediaAuth'
+import createServer from "./createServer"
+import { PassportFB, PassportGoogle } from "./passport"
+import { FBAuthenticate, GoogleAuthenticate } from "./passport/socialMediaAuth"
 
 const {
-    PORT,
-    DB_URI,
-    FACEBOOK_CALLBACK_ROUTE,
-    GOOGLE_CALLBACK_ROUTE,
-    FRONTEND_URI,
-    SERVER_URI
+  PORT,
+  DB_URI,
+  FACEBOOK_CALLBACK_ROUTE,
+  GOOGLE_CALLBACK_ROUTE,
+  FRONTEND_URI,
+  SERVER_URI,
 } = process.env
 
 PassportFB()
 PassportGoogle()
 
+//console.log(`DBURI:  ${DB_URI}`)
+
 const startServer = async () => {
-    try {
-        // Connect to the database
-        await mongoose.connect(
-            `mongodb+srv://${DB_URI}?retryWrites=true&w=majority`,
-            {
-                useCreateIndex: true,
-                useNewUrlParser: true,
-                useUnifiedTopology: true,
-                useFindAndModify: false,
-            }
-        )
+  try {
+    // Connect to the database
+    await mongoose.connect(
+      `mongodb+srv://${DB_URI}?retryWrites=true&w=majority`,
+      {
+        useCreateIndex: true,
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        useFindAndModify: false,
+      }
+    )
 
-        const app = express()
-        app.use(cookieParser())
+    const app = express()
+    app.use(cookieParser())
 
-        // Facebook login route
-        app.get('/auth/facebook', passport.authenticate('facebook'))
+    // Facebook login route
+    app.get("/auth/facebook", passport.authenticate("facebook"))
 
-        // Facebook callback route
-        app.get(
-            `/${FACEBOOK_CALLBACK_ROUTE!}`,
-            passport.authenticate('facebook', {
-                session: false,
-                failureRedirect: FRONTEND_URI,
-                scope: ['profile', 'email'],
-            }),
-            FBAuthenticate
-        )
+    // Facebook callback route
+    app.get(
+      `/${FACEBOOK_CALLBACK_ROUTE!}`,
+      passport.authenticate("facebook", {
+        session: false,
+        failureRedirect: FRONTEND_URI,
+        scope: ["profile", "email"],
+      }),
+      FBAuthenticate
+    )
 
-        // Google login route
-        app.get(
-            '/auth/google',
-            passport.authenticate('google', { scope: ['profile', 'email'] })
-        )
+    // Google login route
+    app.get(
+      "/auth/google",
+      passport.authenticate("google", { scope: ["profile", "email"] })
+    )
 
-        // Google callback route
-        app.get(
-            `/${GOOGLE_CALLBACK_ROUTE!}`,
-            passport.authenticate('google', {
-                session: false,
-                failureRedirect: FRONTEND_URI,
-            }),
-            GoogleAuthenticate
-        )
+    // Google callback route
+    app.get(
+      `/${GOOGLE_CALLBACK_ROUTE!}`,
+      passport.authenticate("google", {
+        session: false,
+        failureRedirect: FRONTEND_URI,
+      }),
+      GoogleAuthenticate
+    )
 
-        const server = await createServer()
+    const server = await createServer()
 
-        server.applyMiddleware({
-            app,
-            cors: { origin: FRONTEND_URI, credentials: true },
-        })
+    server.applyMiddleware({
+      app,
+      cors: {
+        //origin: FRONTEND_URI,
+        credentials: true,
+      },
+    })
 
-        app.listen({ port: PORT }, () =>
-            console.log(
-                `Server is ready at ${SERVER_URI}/${server.graphqlPath}`
-            )
-        )
-    } catch (error) {
-        console.log(error)
-    }
+    app.listen({ port: PORT }, () =>
+      console.log(`Server is ready at ${SERVER_URI}${server.graphqlPath}`)
+    )
+  } catch (error) {
+    console.log(error)
+  }
 }
 
 startServer()
